@@ -87,22 +87,15 @@ var state = {
     data: []
 };
 
-casper.getPageHoldTorrentDetail = function (){
-    var torrentLinks = casper.evaluate(function(){
-        return document.querySelectorAll("table.torrents table.torrentname tr td:nth-child(1)");
-    });
-
-    utils.dump(torrentLinks.length);
-}
-
 // scraper function
 function scrape() {
     casper.echo('Scraping page ' + state.page + '...', 'INFO');
 
     var torrentRows = casper.evaluate(function(){
-        return [].slice.call(document.querySelectorAll("table.torrents tr"), 1);
+        return [].slice.call(document.querySelectorAll("div#idtorrent table.torrents tr"), 1);
     });
 
+    utils.dump(torrentRows);
     casper.each(torrentRows, function(casper, torrentRow){
         state.data = state.data.concat(function(){
             var a = torrentRow.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a:nth-child(1)"),
