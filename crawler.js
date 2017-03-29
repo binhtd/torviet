@@ -6,7 +6,7 @@ var x = require('casper').selectXPath,
                         {
                             "torrentType": "Movie",
                             "torrentCategoryID": 2
-                        },
+                         },
                         {
                             "torrentType": "TV",
                             "torrentCategoryID": 3
@@ -14,7 +14,7 @@ var x = require('casper').selectXPath,
                         {
                             "torrentType": "Music",
                             "torrentCategoryID": 5
-                        },
+                        }
                       ],
     loginUserName = "namthienmenh",
     loginPassword = "mlopqedc";
@@ -92,8 +92,9 @@ var state = {
 function scrape() {
     casper.echo('Scraping page ' + state.page + '...', 'INFO');
 
-    utils.dump( casper.evaluate(function() {
-        var rows = document.querySelectorAll("table.torrents tr:not(:first-child)"), torrentRows = [], torrentNameElement,
+    state.data = state.data.concat(casper.evaluate(function() {
+            var rows = document.querySelectorAll(".torrents tr:not(:first-child)"), row = null,
+            torrentRows = [], torrentNameElement = null,
             filmDetailPage = "", filmName = "",  rowNameElement = null, rowNameContent = "",
             imdMatches = null, imdNumber =0 ,
             totalVoteMatches = null, totalVote = 0,
@@ -103,14 +104,14 @@ function scrape() {
             numberOfLeecher = 0, numberOfSnatchedElement = null, numberOfSnatched = 0,
             uploaderUserNameElement = null, uploaderUserName = "";
 
-
-        for(var i= 0, row; row=rows[i]; i++){
-            torrentNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a:nth-child(1)");
-            filmDetailPage = torrentNameElement.getAttribute('href');
-            filmName = torrentNameElement.getAttribute('title');
+        for(var i= 0; i < rows.length; i++){
+            row = rows[i];
+            torrentNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a:first-of-type");
+            filmDetailPage = torrentNameElement ? torrentNameElement.getAttribute('href') : "";
+            filmName = torrentNameElement ? torrentNameElement.getAttribute('title') : "";
             rowNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1)");
             rowNameContent = rowNameElement.innerText;
-            imdMatches = /.+?<img.+?>(.+)\(.+votes.+/.exec(rowNameElement.innerText);
+            imdMatches = /.+?<img.+?>\s+(.+?)\s+\(.+votes.+/.exec(rowNameElement.innerHTML);
             totalVoteMatches = /.+\((.+?)votes\).+/.exec(rowNameElement.innerText);
             genreMatches = /.+?Genres:(.+)/.exec(rowNameElement.innerText);
             torrentDownloadLinkElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(2) a:nth-child(1)");
@@ -166,13 +167,8 @@ function scrape() {
     })
     );
 
-    //utils.dump(state.data);
-
-
-
-    casper.echo("caputure image " + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
+    utils.dump(state.data);
     casper.capture("torrent-list" + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
-
 
     var notHasMoreData = casper.evaluate(function() {
         var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
@@ -203,35 +199,11 @@ casper.thenOpen(url + "torrents.php");
 
 casper.each(typeOfTorrents, function(casper, torrentType){
   state.torrentType =  torrentType;
+  this.echo("##############################################");
+  this.echo("categoryID=" + state.torrentType["torrentCategoryID"] + "torrentType="  + state.torrentType["torrentType"]);
   casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=" + state.page,
       scrape);
+  this.echo("##############################################");
 });
-
-
-//casper.then(function(){
-//    var linkCount = this.getElementsInfo("table.torrents tr table.torrentname td:nth-child(1) a:nth-child(1)").length;
-//})
-
-
-
-//casper.thenOpen(url + "torrents.php#sltCategory=2", function () {
-//    this.waitForSelectorTextChange("div#idtorrent table.torrents", function(){
-//        casper.capture("torrent-list-" + "Movie" + ".png");
-//    });
-//});
-//
-//casper.thenOpen(url + "torrents.php#sltCategory=3", function () {
-//    this.waitForSelectorTextChange("div#idtorrent table.torrents", function(){
-//        casper.capture("torrent-list-" + "TV" + ".png");
-//    });
-//
-//});
-//
-//casper.thenOpen(url + "torrents.php#sltCategory=5", function () {
-//    this.waitForSelectorTextChange("div#idtorrent table.torrents", function(){
-//        casper.capture("torrent-list-" + "Music" + ".png");
-//    });
-//
-//});
 
 casper.run();
