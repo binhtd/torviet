@@ -94,7 +94,7 @@ function scrape() {
 
     utils.dump( casper.evaluate(function() {
         var rows = document.querySelectorAll("table.torrents tr:not(:first-child)"), torrentRows = [], torrentNameElement,
-            filmDetailPage = "", filmName = "",  rowNameElement = null,
+            filmDetailPage = "", filmName = "",  rowNameElement = null, rowNameContent = "",
             imdMatches = null, imdNumber =0 ,
             totalVoteMatches = null, totalVote = 0,
             genreMatches = null, filmGenre = "",  torrentDownloadLinkElement =  null,
@@ -109,6 +109,7 @@ function scrape() {
             filmDetailPage = torrentNameElement.getAttribute('href');
             filmName = torrentNameElement.getAttribute('title');
             rowNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1)");
+            rowNameContent = rowNameElement.innerText;
             imdMatches = /.+?<img.+?>(.+)\(.+votes.+/.exec(rowNameElement.innerText);
             totalVoteMatches = /.+\((.+?)votes\).+/.exec(rowNameElement.innerText);
             genreMatches = /.+?Genres:(.+)/.exec(rowNameElement.innerText);
@@ -145,6 +146,7 @@ function scrape() {
                 {
                     "filmDetailPage" : filmDetailPage,
                     "filmName" : filmName,
+                    "rowNameContent" : rowNameContent,
                     "imdNumber" : imdNumber,
                     "totalVote" : totalVote,
                     "filmGenre" : filmGenre,
