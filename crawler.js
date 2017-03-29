@@ -84,74 +84,93 @@ casper.start();
 var state = {
     page: 0,
     torrentType: [],
-    data: []
+    data: [],
+    length : 0
 };
 
 // scraper function
 function scrape() {
     casper.echo('Scraping page ' + state.page + '...', 'INFO');
 
-    var torrentRows = casper.evaluate(function(){
-        return [].slice.call(document.querySelectorAll("div#idtorrent table.torrents tr"), 1);
-    });
+    utils.dump( casper.evaluate(function() {
+        var rows = document.querySelectorAll("table.torrents tr:not(:first-child)"), torrentRows = [], torrentNameElement,
+            filmDetailPage = "", filmName = "",  rowNameElement = null,
+            imdMatches = null, imdNumber =0 ,
+            totalVoteMatches = null, totalVote = 0,
+            genreMatches = null, filmGenre = "",  torrentDownloadLinkElement =  null,
+            torrentDownloadLinkUrl = "", totalCommentElement = null, totalComment = 0, timeAliveElement = null, timeAlive= "",
+            filmSizeElement = null, filmSize = 0, numberOfSeederElement = null, numberOfSeeder = 0, numberOfLeecherElement = null,
+            numberOfLeecher = 0, numberOfSnatchedElement = null, numberOfSnatched = 0,
+            uploaderUserNameElement = null, uploaderUserName = "";
 
-    utils.dump(torrentRows);
-    casper.each(torrentRows, function(casper, torrentRow){
-        state.data = state.data.concat(function(){
-            var a = torrentRow.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a:nth-child(1)"),
-                filmDetailPage = a.getAttribute('href'),
-                filmName = a.getAttribute('title');
-                genres = [].slice.call(torrentRow.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a"), 1),
-                filmGenre = [],
-                torrentDownloadLinkElement = torrentRow.querySelector("td:nth-child(2) table.torrentname td:nth-child(2) a:nth-child(1)"),
-                torrentDownloadLinkUrl = torrentDownloadLinkElement.getAttribute('href'),
-                totalCommentElement = torrentRow.querySelector("td:nth-child(3) a:nth-child(1)"),
-                totalComment = this.stripHtmlTag(totalCommentElement.innerText),
-                filmSizeElement = torrentRow.querySelector("td:nth-child(4)"),
-                filmSize = this.stripHtmlTag(filmSizeElement.innerText),
-                numberOfSeederElement = torrentRow.querySelector("td:nth-child(5)"),
-                numberOfSeeder = this.stripHtmlTag(numberOfSeederElement.innerText),
-                numberOfLeecherElement = torrentRow.querySelector("td:nth-child(6)"),
-                numberOfLeecher = this.stripHtmlTag(numberOfLeecherElement.innerText),
-                numberOfSnatchedElement = torrentRow.querySelector("td:nth-child(7)"),
-                numberOfSnatched = this.stripHtmlTag(numberOfSnatchedElement.innerText),
-                uploaderUserNameElement = torrentRow.querySelector("td:nth-child(8)"),
-                uploaderUserName = this.stripHtmlTag(uploaderUserNameElement.innerText);
 
-            for (var i=0; i<genres.length; i++){
-                filmGenre.push(genres[i].innerText);
+        for(var i= 0, row; row=rows[i]; i++){
+            torrentNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a:nth-child(1)");
+            filmDetailPage = torrentNameElement.getAttribute('href');
+            filmName = torrentNameElement.getAttribute('title');
+            rowNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1)");
+            imdMatches = /.+?<img.+?>(.+)\(.+votes.+/.exec(rowNameElement.innerText);
+            totalVoteMatches = /.+\((.+?)votes\).+/.exec(rowNameElement.innerText);
+            genreMatches = /.+?Genres:(.+)/.exec(rowNameElement.innerText);
+            torrentDownloadLinkElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(2) a:nth-child(1)");
+            torrentDownloadLinkUrl = torrentDownloadLinkElement.getAttribute('href');
+            totalCommentElement = row.querySelector("td:nth-child(3) a:nth-child(1)");
+            totalComment = totalCommentElement.innerText;
+            timeAliveElement = row.querySelector("td:nth-child(4)");
+            timeAlive = timeAliveElement.innerText;
+            filmSizeElement = row.querySelector("td:nth-child(5)");
+            filmSize = filmSizeElement.innerText;
+            numberOfSeederElement = row.querySelector("td:nth-child(6)");
+            numberOfSeeder = numberOfSeederElement.innerText;
+            numberOfLeecherElement = row.querySelector("td:nth-child(7)");
+            numberOfLeecher = numberOfLeecherElement.innerText;
+            numberOfSnatchedElement = row.querySelector("td:nth-child(8)");
+            numberOfSnatched = numberOfSnatchedElement.innerText;
+            uploaderUserNameElement = row.querySelector("td:nth-child(9)");
+            uploaderUserName = uploaderUserNameElement.innerText;
+
+            if (( imdMatches !=null) && (imdMatches.length > 1)){
+                imdNumber = imdMatches[1];
             }
 
-            return [
-                {
-                   "filmDetailPage" : filmDetailPage,
-                   "filmName" : filmName,
-                   "filmGenre" : filmGenre,
-                   "torrentDownloadLinkUrl" : torrentDownloadLinkUrl,
-                   "totalComment" : totalComment,
-                   "filmSize" : filmSize,
-                   "numberOfSeeder" : numberOfSeeder,
-                   "numberOfLeecher" : numberOfLeecher,
-                   "numberOfSnatched" : numberOfSnatched,
-                   "uploaderUserName" : uploaderUserName
-                }
-            ];
-        });
-    });
+            if (( totalVoteMatches !=null) && (totalVoteMatches.length > 1)){
+                totalVote = totalVoteMatches[1];
+            }
 
-    utils.dump(state.data);
+            if (( genreMatches !=null) && (genreMatches.length > 1)){
+                filmGenre = genreMatches[1];
+            }
+
+            torrentRows.push([
+                {
+                    "filmDetailPage" : filmDetailPage,
+                    "filmName" : filmName,
+                    "imdNumber" : imdNumber,
+                    "totalVote" : totalVote,
+                    "filmGenre" : filmGenre,
+                    "torrentDownloadLinkUrl" : torrentDownloadLinkUrl,
+                    "totalComment" : totalComment,
+                    "timeAlive" : timeAlive,
+                    "filmSize" : filmSize,
+                    "numberOfSeeder" : numberOfSeeder,
+                    "numberOfLeecher" : numberOfLeecher,
+                    "numberOfSnatched" : numberOfSnatched,
+                    "uploaderUserName" : uploaderUserName
+                }
+            ]);
+        };
+
+        return torrentRows;
+    })
+    );
+
+    //utils.dump(state.data);
+
+
 
     casper.echo("caputure image " + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
     casper.capture("torrent-list" + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
 
-    state.data = state.data.concat(function(){
-        casper.each(torrentRows, function(casper, torrentRow){
-            torrentRow
-        });
-        casper.echo("caputure image " + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
-        casper.capture("torrent-list" + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
-        return [];
-    });
 
     var notHasMoreData = casper.evaluate(function() {
         var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
