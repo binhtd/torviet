@@ -47,24 +47,13 @@ casper.renderJSON = function (what) {
     return this.echo(JSON.stringify(what, null, '  '));
 };
 
-casper.saveJSON = function (what) {
-    var oldParseResult = [];
-
-    if (fs.exists("json/parse_result.json")){
-        oldParseResult = require("json/parse_result.json");
-
-        if (utils.isArray(oldParseResult) && !utils.isNull(oldParseResult) && utils.isArray(what)){
-            what = what.concat(oldParseResult);
-        }
-    }
-
-    fs.write('json/parse_result.json', JSON.stringify(what, null, '  '), 'w');
+casper.saveJSON = function (fileName, what) {
+    fs.write(fileName, JSON.stringify(what, null, '  '), 'w');
 };
 
 casper.getRandomInt = function getRandomInt(min, max) {
     return Math.floor(Math.random() * (max - min)) + min;
 }
-
 
 casper.formatString = function (containBetweenHtmlTag) {
     containBetweenHtmlTag = containBetweenHtmlTag.replace(/(\r\n|\n|\r)/gm, "");
@@ -78,21 +67,33 @@ casper.stripHtmlTag = function(str){
     return body.replace(/(<([^>]+)>)/ig, "");
 };
 
+casper.getQueryVariable = function (url, parameterName) {
+    var pattern = new RegExp( parameterName + "=([0-9]+)" , "i"),
+        matches = pattern.exec(url);
+
+    if ( (matches !=null) & (matches.length > 1)){
+        return matches[1];
+    }
+
+    return(false);
+}
+
 casper.start();
 
 // scraper state
 var state = {
-    page: 0,
-    torrentType: [],
-    data: [],
-    length : 0
+    data: []
 };
 
 // scraper function
 function scrape() {
-    casper.echo('Scraping page ' + state.page + '...', 'INFO');
+    var  torrentTypeID = 0, currentURL = this.getCurrentUrl(), page = 0, pageData = null;;
+    page = casper.getQueryVariable(currentURL, "page");
+    page = page * 1;
+    torrentTypeID = casper.getQueryVariable(currentURL, "sltCategory");
+    casper.echo("page:" + page + "-> sltCategory:" + torrentTypeID);
 
-    state.data = state.data.concat(casper.evaluate(function() {
+    pageData = casper.evaluate(function() {
             var rows = document.querySelectorAll(".torrents tr:not(:first-child)"), row = null,
             torrentRows = [], torrentNameElement = null,
             filmDetailPage = "", filmName = "",  rowNameElement = null, rowNameContent = "",
@@ -164,46 +165,36 @@ function scrape() {
         };
 
         return torrentRows;
-    })
-    );
+    });
 
-    utils.dump(state.data);
-    casper.capture("torrent-list" + state.torrentType["torrentType"] + "-page-" + state.page + ".png");
+    state.data = state.data.concat(pageData);
+    fs.write("torrent-list-" + torrentTypeID + "-page-" + page + ".json", JSON.stringify(pageData, null, '  '), 'w');
+    casper.capture("torrent-list-" + torrentTypeID + "-page-" + page + ".png");
 
     var notHasMoreData = casper.evaluate(function() {
         var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
         return notHasMoreData;
     });
 
-    //if (!notHasMoreData) {
-    //    state.page = state.page + 1;
-    //    casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + state.torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=" + state.page,
-    //        scrape);
-    //}
+    if (!notHasMoreData) {
+        page = page + 1;
+        casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
+    }
 };
-
 
 //set input data
 casper.thenOpen(url, function(){
-    this.capture('login-form.png');
     this.sendKeys("input[name='username']", loginUserName);
     this.sendKeys("input[name='password']", loginPassword);
 
     this.click("input[type='submit']");
     this.waitWhileVisible('a[href="/torrents.php"]', function(){
-        this.capture('after-login.png');
     });
 });
-
 casper.thenOpen(url + "torrents.php");
-
 casper.each(typeOfTorrents, function(casper, torrentType){
-  state.torrentType =  torrentType;
-  this.echo("##############################################");
-  this.echo("categoryID=" + state.torrentType["torrentCategoryID"] + "torrentType="  + state.torrentType["torrentType"]);
-  casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=" + state.page,
+  casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0",
       scrape);
-  this.echo("##############################################");
 });
 
 casper.run();
