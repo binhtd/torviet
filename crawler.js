@@ -25,6 +25,7 @@ var casper = require("casper").create({
     waitTimeout: 300000000,
     stepTimeout: 300000000,
     pageSettings: {
+        webSecurityEnabled: false,
         loadImages: false,
         loadPlugins: false,
         userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.8; rv:23.0) Gecko/20130404 Firefox/23.0"
@@ -144,6 +145,9 @@ function scrape() {
                 filmGenre = genreMatches[1];
             }
 
+            fs.makeDirectory(fs.workingDirectory + "/" + filmName);
+            casper.download("http://torviet.com" + torrentDownloadLinkUrl, fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent");
+
             torrentRows.push([
                 {
                     "filmDetailPage" : filmDetailPage,
@@ -168,8 +172,8 @@ function scrape() {
     });
 
     state.data = state.data.concat(pageData);
-    fs.write("torrent-list-" + torrentTypeID + "-page-" + page + ".json", JSON.stringify(pageData, null, '  '), 'w');
-    casper.capture("torrent-list-" + torrentTypeID + "-page-" + page + ".png");
+    //fs.write("torrent-list-" + torrentTypeID + "-page-" + page + ".json", JSON.stringify(pageData, null, '  '), 'w');
+    //casper.capture("torrent-list-" + torrentTypeID + "-page-" + page + ".png");
 
     var notHasMoreData = casper.evaluate(function() {
         var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
