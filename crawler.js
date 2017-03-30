@@ -123,6 +123,7 @@ function scrape() {
             torrentNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1) a:first-of-type");
             filmDetailPage = torrentNameElement ? torrentNameElement.getAttribute('href') : "";
             filmName = torrentNameElement ? torrentNameElement.getAttribute('title') : "";
+            filmName = filmName.replace( /\s/g, "-" );
             rowNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1)");
             rowNameContent = rowNameElement.innerText;
             imdMatches = /.+?<img.+?>\s+(.+?)\s+\(.+votes.+/.exec(rowNameElement.innerHTML);
@@ -134,8 +135,10 @@ function scrape() {
             totalComment = totalCommentElement.innerText;
             timeAliveElement = row.querySelector("td:nth-child(4)");
             timeAlive = timeAliveElement.innerText;
+            timeAlive = timeAlive.replace(/\n/g, ", ");
             filmSizeElement = row.querySelector("td:nth-child(5)");
             filmSize = filmSizeElement.innerText;
+            filmSize = filmSize.replace( /\n/g, " ");
             numberOfSeederElement = row.querySelector("td:nth-child(6)");
             numberOfSeeder = numberOfSeederElement.innerText;
             numberOfLeecherElement = row.querySelector("td:nth-child(7)");
@@ -182,7 +185,6 @@ function scrape() {
 
     casper.DownloadTorrent(pageData);
     state.data = state.data.concat(pageData);
-    //fs.write("torrent-list-" + torrentTypeID + "-page-" + page + ".json", JSON.stringify(pageData, null, '  '), 'w');
     //casper.capture("torrent-list-" + torrentTypeID + "-page-" + page + ".png");
 
     var notHasMoreData = casper.evaluate(function() {
