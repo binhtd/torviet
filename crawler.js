@@ -79,6 +79,18 @@ casper.getQueryVariable = function (url, parameterName) {
     return(false);
 }
 
+casper.DownloadTorrent = function (pageData){
+    var fileName = "", torrentDownloadLinkUrl = "";
+    for(var i=0; i < pageData.length; i++){
+        fileName = pageData[i]["filmName"];
+        torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
+        casper.echo(fs.workingDirectory + "/" + fileName);
+        fs.makeDirectory(fs.workingDirectory + "/" + fileName);
+
+        casper.download("http://torviet.com" + torrentDownloadLinkUrl, fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent");
+    }
+}
+
 casper.start();
 
 // scraper state
@@ -88,7 +100,7 @@ var state = {
 
 // scraper function
 function scrape() {
-    var  torrentTypeID = 0, currentURL = this.getCurrentUrl(), page = 0, pageData = null;;
+    var  torrentTypeID = 0, currentURL = this.getCurrentUrl(), page = 0, pageData = [];
     page = casper.getQueryVariable(currentURL, "page");
     page = page * 1;
     torrentTypeID = casper.getQueryVariable(currentURL, "sltCategory");
@@ -145,10 +157,7 @@ function scrape() {
                 filmGenre = genreMatches[1];
             }
 
-            fs.makeDirectory(fs.workingDirectory + "/" + filmName);
-            casper.download("http://torviet.com" + torrentDownloadLinkUrl, fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent");
-
-            torrentRows.push([
+            torrentRows.push(
                 {
                     "filmDetailPage" : filmDetailPage,
                     "filmName" : filmName,
@@ -165,12 +174,13 @@ function scrape() {
                     "numberOfSnatched" : numberOfSnatched,
                     "uploaderUserName" : uploaderUserName
                 }
-            ]);
+            );
         };
 
         return torrentRows;
     });
 
+    casper.DownloadTorrent(pageData);
     state.data = state.data.concat(pageData);
     //fs.write("torrent-list-" + torrentTypeID + "-page-" + page + ".json", JSON.stringify(pageData, null, '  '), 'w');
     //casper.capture("torrent-list-" + torrentTypeID + "-page-" + page + ".png");
