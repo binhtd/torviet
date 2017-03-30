@@ -80,12 +80,12 @@ casper.getQueryVariable = function (url, parameterName) {
 }
 
 casper.DownloadTorrent = function (pageData){
-    var fileName = "", torrentDownloadLinkUrl = "";
+    var filmName = "", torrentDownloadLinkUrl = "";
     for(var i=0; i < pageData.length; i++){
-        fileName = pageData[i]["filmName"];
+        filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
-        casper.echo(fs.workingDirectory + "/" + fileName);
-        fs.makeDirectory(fs.workingDirectory + "/" + fileName);
+        casper.echo(fs.workingDirectory + "/" + filmName);
+        fs.makeDirectory(fs.workingDirectory + "/" + filmName);
 
         casper.download("http://torviet.com" + torrentDownloadLinkUrl, fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent");
     }
