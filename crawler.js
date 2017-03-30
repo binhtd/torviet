@@ -77,6 +77,15 @@ casper.getQueryVariable = function (url, parameterName) {
     }
 
     return(false);
+};
+
+casper.createFolderHoldFilmFiles = function (filmName) {
+    casper.echo("Created film folder:" + fs.workingDirectory + "/" + filmName);
+    fs.makeDirectory(fs.workingDirectory + "/" + filmName);
+};
+
+casper.getTorrentFullFilePath = function (filmName){
+    return fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent";
 }
 
 casper.DownloadTorrent = function (pageData){
@@ -84,10 +93,15 @@ casper.DownloadTorrent = function (pageData){
     for(var i=0; i < pageData.length; i++){
         filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
-        casper.echo(fs.workingDirectory + "/" + filmName);
-        fs.makeDirectory(fs.workingDirectory + "/" + filmName);
+        casper.createFolderHoldFilmFiles(filmName);
+        casper.download("http://torviet.com" + torrentDownloadLinkUrl, casper.getTorrentFullFilePath(filmName));
+    }
+}
 
-        casper.download("http://torviet.com" + torrentDownloadLinkUrl, fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent");
+casper.getTorrentFullFilePathForPageData = function (pageData){
+    for(var i=0; i < pageData.length; i++){
+        filmName = pageData[i]["filmName"];
+        pageData[i]["torrentFullFilePath"] = casper.getTorrentFullFilePath(filmName);
     }
 }
 
@@ -184,8 +198,8 @@ function scrape() {
     });
 
     casper.DownloadTorrent(pageData);
+    pageData = casper.getTorrentFullFilePathForPageData(pageData);
     state.data = state.data.concat(pageData);
-    //casper.capture("torrent-list-" + torrentTypeID + "-page-" + page + ".png");
 
     var notHasMoreData = casper.evaluate(function() {
         var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
@@ -195,6 +209,8 @@ function scrape() {
     if (!notHasMoreData) {
         page = page + 1;
         casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
+    }else{
+        casper.saveJSON("data-type"+torrentTypeID + "-.json", state.data);
     }
 };
 
