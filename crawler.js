@@ -1,20 +1,21 @@
 var x = require('casper').selectXPath,
     fs = require('fs'),
     utils = require('utils'),
-    url = 'http://torviet.com/',
+    url = 'http://torviet.com',
     typeOfTorrents = [
         {
             "torrentType": "Movie",
             "torrentCategoryID": 2
-        },
-        {
-            "torrentType": "TV",
-            "torrentCategoryID": 3
-        },
-        {
-            "torrentType": "Music",
-            "torrentCategoryID": 5
         }
+        //,
+        //{
+        //    "torrentType": "TV",
+        //    "torrentCategoryID": 3
+        //},
+        //{
+        //    "torrentType": "Music",
+        //    "torrentCategoryID": 5
+        //}
     ],
     loginUserName = "namthienmenh",
     loginPassword = "mlopqedc";
@@ -105,7 +106,7 @@ casper.DownloadTorrent = function (pageData){
         filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
         casper.createFolderHoldFilmFiles(filmName);
-        casper.download("http://torviet.com" + torrentDownloadLinkUrl, casper.getTorrentFullFilePath(filmName));
+        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFullFilePath(filmName));
     }
 };
 
@@ -128,6 +129,77 @@ casper.getTorrentTypeByTorrentCategoryID = function (torrentCategoryID){
 
     return "";
 };
+
+casper.getFilmDetailForPageData = function(data){
+    var pageData = data, filmDetailPageContent = "";
+
+    for(var i=0; i < pageData.length; i++) {
+        utils.dump(pageData[i]["filmDetailPage"]);
+
+        (function(index){
+            casper.thenOpen( url + pageData[index]["filmDetailPage"], function(){
+                var filmInformation = this.fetchText("#kimdb tr:nth-child(2) td"),
+                    ratingMatches = /.+?Rating:(.+?)\n/gmi.exec(filmInformation), rating = "",
+                    languagesMatches = /.+?Language:(.+?)\n/gmi.exec(filmInformation), languages = "",
+                    countryMatches = /.+?Country:(.+?)\n/gmi.exec(filmInformation), country = "",
+                    runtimeMatches = /.+?Runtime:(.+?)\n/gmi.exec(filmInformation), runtime = "",
+                    allGenresMatches = /.+?All Genres:(.+?)\n/gmi.exec(filmInformation), allGenres = "",
+                    directorMatches = /.+?Director:(.+?)\n/gmi.exec(filmInformation), director = "",
+                    writtenByMatches = /.+?Written By:(.+?)\n/gmi.exec(filmInformation), writtenBy = "",
+                    castMatches = /.+?Cast:(.+?)\n/gmi.exec(filmInformation), cast = "";
+
+                if ( (ratingMatches!=null) && (ratingMatches.length > 1)){
+                    rating = ratingMatches[1];
+                }
+
+                if ( (languagesMatches!=null) && (languagesMatches.length > 1)){
+                    languages = languagesMatches[1];
+                }
+
+                if ( (countryMatches!=null) && (countryMatches.length > 1)){
+                    country = countryMatches[1];
+                }
+
+                if ( (runtimeMatches!=null) && (runtimeMatches.length > 1)){
+                    runtime = runtimeMatches[1];
+                }
+
+                if ( (allGenresMatches!=null) && (allGenresMatches.length > 1)){
+                    allGenres = allGenresMatches[1];
+                }
+
+                if ( (directorMatches!=null) && (directorMatches.length > 1)){
+                    director = directorMatches[1];
+                }
+
+                if ( (writtenByMatches!=null) && (writtenByMatches.length > 1)){
+                    writtenBy = writtenByMatches[1];
+                }
+
+                if ( (castMatches!=null) && (castMatches.length > 1)){
+                    cast = castMatches[1];
+                }
+
+                pageData[index]["filmDetailPageContent"] = {
+                  "posterIMDB": this.getElementAttribute("#kimdb #posterimdb img", "src"),
+                  "originLinkIMDB" : this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href"),
+                  "rating" : rating,
+                  "languages": languages,
+                  "country" : country,
+                  "runtime" : runtime,
+                  "allGenres" : allGenres,
+                  "director" : director,
+                  "writtenBy" : writtenBy,
+                  "cast" : cast,
+                  "filmPlotOutline" : this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "")
+                };
+            });
+        })(i);
+    }
+
+    return pageData;
+}
+
 
 casper.start();
 
@@ -196,6 +268,10 @@ function scrape() {
                 filmGenre = genreMatches[1];
             }
 
+            //casper.thenOpen(url + filmDetailPage, function(){
+            //    filmDetailPageContent = this.getPageContent();
+            //});
+
             torrentRows.push(
                 {
                     "filmDetailPage" : filmDetailPage,
@@ -221,18 +297,19 @@ function scrape() {
     //casper.DownloadTorrent(pageData);
 
     pageData = casper.getTorrentFilePathForPageData(pageData);
+    pageData =  casper.getFilmDetailForPageData(pageData);
     utils.dump(pageData);
     state[torrentType] = state[torrentType].concat(pageData);
-
-    var notHasMoreData = casper.evaluate(function() {
-        var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
-        return notHasMoreData;
-    });
-
-    if (!notHasMoreData) {
-        page = page + 1;
-        casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
-    }
+    //
+    //var notHasMoreData = casper.evaluate(function() {
+    //    var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
+    //    return notHasMoreData;
+    //});
+    //
+    //if (!notHasMoreData) {
+    //    page = page + 1;
+    //    casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
+    //}
 };
 
 //set input data
@@ -247,7 +324,7 @@ casper.thenOpen(url, function(){
 
 casper.thenOpen(url + "torrents.php");
 casper.each(typeOfTorrents, function(casper, torrentType){
-    casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0", scrape).then(function(){
+    casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0", scrape).then(function(){
         var torrentTypeName = torrentType["torrentType"];
         casper.saveJSON(torrentTypeName + ".json", state[torrentTypeName]);
     });
