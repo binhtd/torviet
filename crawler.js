@@ -3,19 +3,19 @@ var x = require('casper').selectXPath,
     utils = require('utils'),
     url = 'http://torviet.com/',
     typeOfTorrents = [
-                        {
-                            "torrentType": "Movie",
-                            "torrentCategoryID": 2
-                         },
-                        {
-                            "torrentType": "TV",
-                            "torrentCategoryID": 3
-                        },
-                        {
-                            "torrentType": "Music",
-                            "torrentCategoryID": 5
-                        }
-                      ],
+        {
+            "torrentType": "Movie",
+            "torrentCategoryID": 2
+        },
+        {
+            "torrentType": "TV",
+            "torrentCategoryID": 3
+        },
+        {
+            "torrentType": "Music",
+            "torrentCategoryID": 5
+        }
+    ],
     loginUserName = "namthienmenh",
     loginPassword = "mlopqedc";
 
@@ -32,17 +32,28 @@ var casper = require("casper").create({
     }
 });
 
-//casper.on("resource.requested", function(requestData, networkRequest){
-//    var skip = [
-//        'facebook.com',
-//    ];
-//
-//    casper.each(skip, function(self, needle) {
-//        if (requestData.url.indexOf(needle) > 0) {
-//            networkRequest.abort();
-//        }
-//    });
-//});
+// scraper state
+var state = {
+    "Movie" : [],
+    "TV"    : [],
+    "Music" : []
+};
+
+casper.on("resource.requested", function(requestData, networkRequest){
+    var skip = [
+        'facebook.com',
+    ];
+
+    casper.each(skip, function(self, needle) {
+        if (requestData.url.indexOf(needle) > 0) {
+            networkRequest.abort();
+        }
+    });
+});
+
+casper.on("resource.error", function(resourceError) {
+    this.echo("Resource error: " + "Error code: "+resourceError.errorCode+" ErrorString: "+resourceError.errorString+" url: "+resourceError.url+" id: "+resourceError.id, "ERROR");
+});
 
 casper.renderJSON = function (what) {
     return this.echo(JSON.stringify(what, null, '  '));
@@ -84,9 +95,9 @@ casper.createFolderHoldFilmFiles = function (filmName) {
     fs.makeDirectory(fs.workingDirectory + "/" + filmName);
 };
 
-casper.getTorrentFullFilePath = function (filmName){
+casper.getTorrentFilePath = function (filmName){
     return fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent";
-}
+};
 
 casper.DownloadTorrent = function (pageData){
     var filmName = "", torrentDownloadLinkUrl = "";
@@ -96,29 +107,41 @@ casper.DownloadTorrent = function (pageData){
         casper.createFolderHoldFilmFiles(filmName);
         casper.download("http://torviet.com" + torrentDownloadLinkUrl, casper.getTorrentFullFilePath(filmName));
     }
-}
+};
 
-casper.getTorrentFullFilePathForPageData = function (pageData){
+casper.getTorrentFilePathForPageData = function (data){
+    var pageData = data;
     for(var i=0; i < pageData.length; i++){
         filmName = pageData[i]["filmName"];
-        pageData[i]["torrentFullFilePath"] = casper.getTorrentFullFilePath(filmName);
+        pageData[i]["torrentFullFilePath"] = casper.getTorrentFilePath(filmName);
     }
-}
+
+    return pageData;
+};
+
+casper.getTorrentTypeByTorrentCategoryID = function (torrentCategoryID){
+    for (var i=0; i < typeOfTorrents.length; i++){
+        if (typeOfTorrents[i]["torrentCategoryID"] == torrentCategoryID){
+            return typeOfTorrents[i]["torrentType"];
+        }
+    }
+
+    return "";
+};
 
 casper.start();
 
-// scraper state
-var state = {
-    data: []
-};
-
 // scraper function
 function scrape() {
-    var  torrentTypeID = 0, currentURL = this.getCurrentUrl(), page = 0, pageData = [];
+    var  torrentTypeID = 0, currentURL = this.getCurrentUrl(),
+        page = 0, pageData = [], torrentType = "";
     page = casper.getQueryVariable(currentURL, "page");
     page = page * 1;
     torrentTypeID = casper.getQueryVariable(currentURL, "sltCategory");
-    casper.echo("page:" + page + "-> sltCategory:" + torrentTypeID);
+    torrentTypeID = torrentTypeID * 1;
+    torrentType = casper.getTorrentTypeByTorrentCategoryID(torrentTypeID);
+    torrentType = torrentType + "";
+    casper.echo("page:" + page + "-> sltCategory:" + torrentTypeID + " torrentType->" + torrentType);
 
     pageData = casper.evaluate(function() {
             var rows = document.querySelectorAll(".torrents tr:not(:first-child)"), row = null,
@@ -139,7 +162,6 @@ function scrape() {
             filmName = torrentNameElement ? torrentNameElement.getAttribute('title') : "";
             filmName = filmName.replace( /\s/g, "-" );
             rowNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1)");
-            rowNameContent = rowNameElement.innerText;
             imdMatches = /.+?<img.+?>\s+(.+?)\s+\(.+votes.+/.exec(rowNameElement.innerHTML);
             totalVoteMatches = /.+\((.+?)votes\).+/.exec(rowNameElement.innerText);
             genreMatches = /.+?Genres:(.+)/.exec(rowNameElement.innerText);
@@ -178,7 +200,6 @@ function scrape() {
                 {
                     "filmDetailPage" : filmDetailPage,
                     "filmName" : filmName,
-                    "rowNameContent" : rowNameContent,
                     "imdNumber" : imdNumber,
                     "totalVote" : totalVote,
                     "filmGenre" : filmGenre,
@@ -197,9 +218,11 @@ function scrape() {
         return torrentRows;
     });
 
-    casper.DownloadTorrent(pageData);
-    pageData = casper.getTorrentFullFilePathForPageData(pageData);
-    state.data = state.data.concat(pageData);
+    //casper.DownloadTorrent(pageData);
+
+    pageData = casper.getTorrentFilePathForPageData(pageData);
+    utils.dump(pageData);
+    state[torrentType] = state[torrentType].concat(pageData);
 
     var notHasMoreData = casper.evaluate(function() {
         var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
@@ -209,8 +232,6 @@ function scrape() {
     if (!notHasMoreData) {
         page = page + 1;
         casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
-    }else{
-        casper.saveJSON("data-type"+torrentTypeID + "-.json", state.data);
     }
 };
 
@@ -223,10 +244,13 @@ casper.thenOpen(url, function(){
     this.waitWhileVisible('a[href="/torrents.php"]', function(){
     });
 });
+
 casper.thenOpen(url + "torrents.php");
 casper.each(typeOfTorrents, function(casper, torrentType){
-  casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0",
-      scrape);
+    casper.thenOpen(url + "torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0", scrape).then(function(){
+        var torrentTypeName = torrentType["torrentType"];
+        casper.saveJSON(torrentTypeName + ".json", state[torrentTypeName]);
+    });
 });
 
 casper.run();
