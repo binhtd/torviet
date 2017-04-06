@@ -7,15 +7,15 @@ var x = require('casper').selectXPath,
             "torrentType": "Movie",
             "torrentCategoryID": 2
         }
-        //,
-        //{
-        //    "torrentType": "TV",
-        //    "torrentCategoryID": 3
-        //},
-        //{
-        //    "torrentType": "Music",
-        //    "torrentCategoryID": 5
-        //}
+        ,
+        {
+           "torrentType": "TV",
+           "torrentCategoryID": 3
+        },
+        {
+           "torrentType": "Music",
+           "torrentCategoryID": 5
+        }
     ],
     loginUserName = "namthienmenh",
     loginPassword = "mlopqedc";
@@ -39,6 +39,7 @@ var state = {
     "TV"    : [],
     "Music" : []
 };
+
 
 casper.on("resource.requested", function(requestData, networkRequest){
     var skip = [
@@ -84,29 +85,29 @@ casper.getQueryVariable = function (url, parameterName) {
     var pattern = new RegExp( parameterName + "=([0-9]+)" , "i"),
         matches = pattern.exec(url);
 
-    if ( (matches !=null) & (matches.length > 1)){
+    if ( (matches !=null) && (matches.length > 1)){
         return matches[1];
     }
 
     return(false);
 };
 
-casper.createFolderHoldFilmFiles = function (filmName) {
-    casper.echo("Created film folder:" + fs.workingDirectory + "/" + filmName);
-    fs.makeDirectory(fs.workingDirectory + "/" + filmName);
+casper.createFolderHoldFilmFiles = function (filmName, torrentType) {
+    casper.echo("Created film folder:" + fs.workingDirectory + "/" + torrentType+ "/" + filmName);
+    fs.makeDirectory(fs.workingDirectory + "/" + torrentType + "/" + filmName + "/");
 };
 
-casper.getTorrentFilePath = function (filmName){
-    return fs.workingDirectory + "/" + filmName + "/" + filmName + ".torrent";
+casper.getTorrentFilePath = function (filmName, torrentType){
+    return  fs.workingDirectory + "/" + torrentType + "/"  + filmName + "/" + filmName + ".torrent";
 };
 
-casper.DownloadTorrent = function (pageData){
+casper.DownloadTorrent = function (pageData, torrentType){
     var filmName = "", torrentDownloadLinkUrl = "";
     for(var i=0; i < pageData.length; i++){
         filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
-        casper.createFolderHoldFilmFiles(filmName);
-        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFullFilePath(filmName));
+        casper.createFolderHoldFilmFiles(filmName, torrentType);
+        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentType));
     }
 };
 
@@ -200,7 +201,6 @@ casper.getFilmDetailForPageData = function(data){
     return pageData;
 }
 
-
 casper.start();
 
 // scraper function
@@ -268,10 +268,6 @@ function scrape() {
                 filmGenre = genreMatches[1];
             }
 
-            //casper.thenOpen(url + filmDetailPage, function(){
-            //    filmDetailPageContent = this.getPageContent();
-            //});
-
             torrentRows.push(
                 {
                     "filmDetailPage" : filmDetailPage,
@@ -294,22 +290,22 @@ function scrape() {
         return torrentRows;
     });
 
-    //casper.DownloadTorrent(pageData);
+    casper.DownloadTorrent(pageData, torrentType);
 
-    pageData = casper.getTorrentFilePathForPageData(pageData);
-    pageData =  casper.getFilmDetailForPageData(pageData);
-    utils.dump(pageData);
+    pageData = casper.getTorrentFilePathForPageData(pageData, torrentType);
+    // pageData =  casper.getFilmDetailForPageData(pageData);
+    // utils.dump(pageData);
     state[torrentType] = state[torrentType].concat(pageData);
-    //
-    //var notHasMoreData = casper.evaluate(function() {
-    //    var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
-    //    return notHasMoreData;
-    //});
-    //
-    //if (!notHasMoreData) {
-    //    page = page + 1;
-    //    casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
-    //}
+
+    var notHasMoreData = casper.evaluate(function() {
+       var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
+       return notHasMoreData;
+    });
+
+    if (!notHasMoreData) {
+       page = page + 1;
+       casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
+    }
 };
 
 //set input data
