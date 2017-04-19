@@ -135,7 +135,6 @@ casper.getFilmDetailForPageData = function(data){
     var pageData = data, filmDetailPageContent = "";
 
     for(var i=0; i < pageData.length; i++) {
-        utils.dump(pageData[i]["filmDetailPage"]);
 
         (function(index){
             casper.thenOpen( url + pageData[index]["filmDetailPage"], function(){
@@ -143,6 +142,8 @@ casper.getFilmDetailForPageData = function(data){
                     outerObject = (this.exists('#outer') ? this.getElementInfo('#outer') : null), outerContent = (!utils.isNull(outerObject) ? outerObject["html"] : ""),
                     kdescrObject = (this.exists('#kdescr') ? this.getElementInfo('#kdescr') : null), kdescrContent = (!utils.isNull(kdescrObject) ? kdescrObject["html"] : ""),
                     ktrailerObject = (this.exists('#ktrailer') ? this.getElementInfo('#ktrailer') : null), ktrailerContent = (!utils.isNull(ktrailerObject) ? ktrailerObject["html"] : ""),
+                    kothercopyObject = (this.exists('#kothercopy table tr:not(:first-child)') ? this.getElementsInfo('#kothercopy table tr:not(:first-child)') : null),
+                    kothercopy = [], kothercopyRow = "", kothercopyRowMatches = [], kothercopyRowLink = "", kothercopyRowFileSize = "", kothercopyRowTimeAdded = "",
                     ratingMatches = /.+?Rating:(.+?)\n/gmi.exec(filmInformation), rating = "",
                     languagesMatches = /.+?Language:(.+?)\n/gmi.exec(filmInformation), languages = "",
                     countryMatches = /.+?Country:(.+?)\n/gmi.exec(filmInformation), country = "",
@@ -160,7 +161,8 @@ casper.getFilmDetailForPageData = function(data){
                     techScanTypeMatches = /<li\s+class="infolabel"\s?>Scan type.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techScanType = "",
                     subtitleURLPattern = /(\/downloadsubs\.php.+?)"/gim, subtitleURLMatches = [], subtitleURLs = [],
                     imdbRefMatches = /iMDB:\s+?<a\s+href="(.+?)"/gmi.exec(kdescrContent), imdbRef = "",
-                    ktrailerMatches = /<iframe.+?src="(.+?)".+?>/gmi.exec(ktrailerContent), trailerURL = "";
+                    ktrailerMatches = /<iframe.+?src="(.+?)".+?>/gmi.exec(ktrailerContent), trailerURL = "",
+                    screenShotPattern = /<img.+?src="(.+?)"/gmi,  screenShotMatches = [], screenShots = [];
 
 
                 if ( (ratingMatches!=null) && (ratingMatches.length > 1)){
@@ -240,6 +242,45 @@ casper.getFilmDetailForPageData = function(data){
                     trailerURL = ktrailerMatches[1];
                 }
 
+                while ( (screenShotMatches = screenShotPattern.exec(kdescrContent)) !== null) {
+                    if (screenShotMatches.index === screenShotPattern.lastIndex) {
+                        screenShotPattern.lastIndex++;
+                    }
+
+                    screenShots.push(screenShotMatches[1]);
+                }
+
+
+                if (!utils.isNull(kothercopyObject)){
+                    for(var i=0; i<kothercopyObject.length; i++){
+                        kothercopyRow = kothercopyObject[i]["html"];
+                        kothercopyRowMatches = /<td.+?<td.+?<a.+?href=\\?"(.+?)\\?"/gmi.exec(kothercopyRow);
+                        kothercopyRowLink = "";
+
+                        if ((kothercopyRowMatches!=null) && (kothercopyRowMatches.length > 1)){
+                            kothercopyRowLink = kothercopyRowMatches[1];
+                        }
+
+
+                        kothercopyRowFileSize = "";
+                        kothercopyRowMatches = /<td.+?<td.+?<td.+?<td.+?>(.+?)<\/td>/gmi.exec(kothercopyRow);
+                        if ((kothercopyRowMatches!=null) && (kothercopyRowMatches.length > 1)){
+                            kothercopyRowFileSize = kothercopyRowMatches[1];
+                        }
+
+                        kothercopyRowTimeAdded = "";
+                        kothercopyRowMatches = /<td.+?<td.+?<td.+?<td.+?<td.+?>(<span.+?>)?(.+?)<\/td>/gmi.exec(kothercopyRow);
+                        if ((kothercopyRowMatches!=null) && (kothercopyRowMatches.length > 2)){
+                            kothercopyRowTimeAdded = kothercopyRowMatches[2];
+                        }
+
+                        kothercopy.push({
+                            "url" : kothercopyRowLink,
+                            "size" : kothercopyRowFileSize,
+                            "timeAdded" : kothercopyRowTimeAdded
+                        });
+                    }
+                }
 
                 pageData[index]["filmDetailPageContent"] = {
                   "posterIMDB": this.getElementAttribute("#kimdb #posterimdb img", "src"),
@@ -264,10 +305,10 @@ casper.getFilmDetailForPageData = function(data){
                   },
                   "subtitleURLs": subtitleURLs,
                   "imdbRef" : imdbRef,
-                  "trailerURL" : trailerURL
+                  "trailerURL" : trailerURL,
+                  "screenShots" : screenShots,
+                  "otherCopy" : kothercopy
                 };
-
-                utils.dump(pageData[index]["filmDetailPageContent"]);
             });
         })(i);
     }
