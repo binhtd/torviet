@@ -7,15 +7,15 @@ var x = require('casper').selectXPath,
             "torrentType": "Movie",
             "torrentCategoryID": 2
         }
-        ,
-        {
-           "torrentType": "TV",
-           "torrentCategoryID": 3
-        },
-        {
-           "torrentType": "Music",
-           "torrentCategoryID": 5
-        }
+        //,
+        //{
+        //   "torrentType": "TV",
+        //   "torrentCategoryID": 3
+        //},
+        //{
+        //   "torrentType": "Music",
+        //   "torrentCategoryID": 5
+        //}
     ],
     loginUserName = "namthienmenh",
     loginPassword = "mlopqedc";
@@ -62,7 +62,7 @@ casper.renderJSON = function (what) {
 };
 
 casper.saveJSON = function (fileName, what) {
-    fs.write(fileName, JSON.stringify(what, null, '  '), 'w');
+    fs.write(fileName, JSON.stringify(what, null, '  '));
 };
 
 casper.getRandomInt = function getRandomInt(min, max) {
@@ -78,7 +78,7 @@ casper.formatString = function (containBetweenHtmlTag) {
 };
 
 casper.stripHtmlTag = function(str){
-    return body.replace(/(<([^>]+)>)/ig, "");
+    return str.replace(/(\r\n|\n|\r)/gm, "").replace(/<([^.]+)>.*?<\/\1>/igm, "");
 };
 
 casper.getQueryVariable = function (url, parameterName) {
@@ -92,30 +92,30 @@ casper.getQueryVariable = function (url, parameterName) {
     return(false);
 };
 
-casper.createFolderHoldFilmFiles = function (filmName, torrentType) {
-    casper.echo("Created film folder:" + fs.workingDirectory + "/" + torrentType+ "/" + filmName);
-    fs.makeDirectory(fs.workingDirectory + "/" + torrentType + "/" + filmName + "/");
+casper.createFolderHoldFilmFiles = function (filmName, torrentTypeName) {
+    casper.echo("Created film folder:" + fs.workingDirectory + "/" + torrentTypeName+ "/" + filmName);
+    fs.makeDirectory(fs.workingDirectory + "/" + torrentTypeName + "/" + filmName + "/");
 };
 
-casper.getTorrentFilePath = function (filmName, torrentType){
-    return  fs.workingDirectory + "/" + torrentType + "/"  + filmName + "/" + filmName + ".torrent";
+casper.getTorrentFilePath = function (filmName, torrentTypeName){
+    return  fs.workingDirectory + "/" + torrentTypeName + "/"  + filmName + "/" + filmName + ".torrent";
 };
 
-casper.DownloadTorrent = function (pageData, torrentType){
+casper.DownloadTorrent = function (pageData, torrentTypeName){
     var filmName = "", torrentDownloadLinkUrl = "";
     for(var i=0; i < pageData.length; i++){
         filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
-        casper.createFolderHoldFilmFiles(filmName, torrentType);
-        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentType));
+        casper.createFolderHoldFilmFiles(filmName, torrentTypeName);
+        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentTypeName));
     }
 };
 
-casper.getTorrentFilePathForPageData = function (data){
+casper.getTorrentFilePathForPageData = function (data, torrentTypeName){
     var pageData = data;
     for(var i=0; i < pageData.length; i++){
         filmName = pageData[i]["filmName"];
-        pageData[i]["torrentFullFilePath"] = casper.getTorrentFilePath(filmName);
+        pageData[i]["torrentFullFilePath"] = casper.getTorrentFilePath(filmName, torrentTypeName);
     }
 
     return pageData;
@@ -140,6 +140,9 @@ casper.getFilmDetailForPageData = function(data){
         (function(index){
             casper.thenOpen( url + pageData[index]["filmDetailPage"], function(){
                 var filmInformation = this.fetchText("#kimdb tr:nth-child(2) td"),
+                    outerObject = (this.exists('#outer') ? this.getElementInfo('#outer') : null), outerContent = (!utils.isNull(outerObject) ? outerObject["html"] : ""),
+                    kdescrObject = (this.exists('#kdescr') ? this.getElementInfo('#kdescr') : null), kdescrContent = (!utils.isNull(kdescrObject) ? kdescrObject["html"] : ""),
+                    ktrailerObject = (this.exists('#ktrailer') ? this.getElementInfo('#ktrailer') : null), ktrailerContent = (!utils.isNull(ktrailerObject) ? ktrailerObject["html"] : ""),
                     ratingMatches = /.+?Rating:(.+?)\n/gmi.exec(filmInformation), rating = "",
                     languagesMatches = /.+?Language:(.+?)\n/gmi.exec(filmInformation), languages = "",
                     countryMatches = /.+?Country:(.+?)\n/gmi.exec(filmInformation), country = "",
@@ -147,7 +150,18 @@ casper.getFilmDetailForPageData = function(data){
                     allGenresMatches = /.+?All Genres:(.+?)\n/gmi.exec(filmInformation), allGenres = "",
                     directorMatches = /.+?Director:(.+?)\n/gmi.exec(filmInformation), director = "",
                     writtenByMatches = /.+?Written By:(.+?)\n/gmi.exec(filmInformation), writtenBy = "",
-                    castMatches = /.+?Cast:(.+?)\n/gmi.exec(filmInformation), cast = "";
+                    castMatches = /.+?Cast:(.+?)\n/gmi.exec(filmInformation), cast = "",
+                    techRuntimeMatches = /<li\s+class="infolabel"\s?>Runtime.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techRuntime = "",
+                    techResolutionMatches = /<li\s+class="infolabel"\s?>Resolution.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techResolution = "",
+                    techAudioMatches = /<li\s+class="infolabel"\s?>Audio.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techAudio = "",
+                    techSubtitlesMatches = /<li\s+class="infolabel"\s?>Subtitles.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techSubtitles = "",
+                    techBitrateMatches = /<li\s+class="infolabel"\s?>Bitrate.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techBitrate = "",
+                    techFramerateMatches = /<li\s+class="infolabel"\s?>Framerate.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techFramerate = "",
+                    techScanTypeMatches = /<li\s+class="infolabel"\s?>Scan type.+?class="infovalue"\s?>(.+?)</gmi.exec(outerContent), techScanType = "",
+                    subtitleURLPattern = /(\/downloadsubs\.php.+?)"/gim, subtitleURLMatches = [], subtitleURLs = [],
+                    imdbRefMatches = /iMDB:\s+?<a\s+href="(.+?)"/gmi.exec(kdescrContent), imdbRef = "",
+                    ktrailerMatches = /<iframe.+?src="(.+?)".+?>/gmi.exec(ktrailerContent), trailerURL = "";
+
 
                 if ( (ratingMatches!=null) && (ratingMatches.length > 1)){
                     rating = ratingMatches[1];
@@ -181,6 +195,52 @@ casper.getFilmDetailForPageData = function(data){
                     cast = castMatches[1];
                 }
 
+                if ( (techRuntimeMatches!=null) && (techRuntimeMatches.length > 1)){
+                    techRuntime = techRuntimeMatches[1];
+                }
+
+                if ( (techResolutionMatches!=null) && (techResolutionMatches.length > 1)){
+                    techResolution = techResolutionMatches[1];
+                }
+
+                if ( (techAudioMatches!=null) && (techAudioMatches.length > 1)){
+                    techAudio = techAudioMatches[1];
+                }
+
+                if ( (techSubtitlesMatches!=null) && (techSubtitlesMatches.length > 1)){
+                    techSubtitles = techSubtitlesMatches[1];
+                }
+
+                if ( (techBitrateMatches!=null) && (techBitrateMatches.length > 1)){
+                    techBitrate = techBitrateMatches[1];
+                }
+
+                if ( (techFramerateMatches!=null) && (techFramerateMatches.length > 1)){
+                    techFramerate = techFramerateMatches[1];
+                }
+
+                if ( (techScanTypeMatches!=null) && (techScanTypeMatches.length > 1)){
+                    techScanType = techScanTypeMatches[1];
+                }
+
+
+                while ( (subtitleURLMatches = subtitleURLPattern.exec(outerContent)) !== null) {
+                    if (subtitleURLMatches.index === subtitleURLPattern.lastIndex) {
+                        subtitleURLPattern.lastIndex++;
+                    }
+
+                    subtitleURLs.push(subtitleURLMatches[1]);
+                }
+
+                if ( (imdbRefMatches!=null) && (imdbRefMatches.length > 1)){
+                    imdbRef = imdbRefMatches[1];
+                }
+
+                if ( (ktrailerMatches!=null) && (ktrailerMatches.length > 1)){
+                    trailerURL = ktrailerMatches[1];
+                }
+
+
                 pageData[index]["filmDetailPageContent"] = {
                   "posterIMDB": this.getElementAttribute("#kimdb #posterimdb img", "src"),
                   "originLinkIMDB" : this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href"),
@@ -192,8 +252,22 @@ casper.getFilmDetailForPageData = function(data){
                   "director" : director,
                   "writtenBy" : writtenBy,
                   "cast" : cast,
-                  "filmPlotOutline" : this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "")
+                  "filmPlotOutline" : casper.stripHtmlTag(this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "")),
+                  "technicalInformation" : {
+                      "runtime" : techRuntime,
+                      "resolution" : techResolution,
+                      "audio" : techAudio,
+                      "subtitles" : techSubtitles,
+                      "bitrate" : techBitrate,
+                      "Framerate" : techFramerate,
+                      "scanType" : techScanType
+                  },
+                  "subtitleURLs": subtitleURLs,
+                  "imdbRef" : imdbRef,
+                  "trailerURL" : trailerURL
                 };
+
+                utils.dump(pageData[index]["filmDetailPageContent"]);
             });
         })(i);
     }
@@ -211,9 +285,9 @@ function scrape() {
     page = page * 1;
     torrentTypeID = casper.getQueryVariable(currentURL, "sltCategory");
     torrentTypeID = torrentTypeID * 1;
-    torrentType = casper.getTorrentTypeByTorrentCategoryID(torrentTypeID);
-    torrentType = torrentType + "";
-    casper.echo("page:" + page + "-> sltCategory:" + torrentTypeID + " torrentType->" + torrentType);
+    torrentTypeName = casper.getTorrentTypeByTorrentCategoryID(torrentTypeID);
+    torrentTypeName = torrentTypeName + "";
+    casper.echo("page:" + page + "-> sltCategory:" + torrentTypeID + " torrentType->" + torrentTypeName);
 
     pageData = casper.evaluate(function() {
             var rows = document.querySelectorAll(".torrents tr:not(:first-child)"), row = null,
@@ -290,22 +364,21 @@ function scrape() {
         return torrentRows;
     });
 
-    casper.DownloadTorrent(pageData, torrentType);
+    //casper.DownloadTorrent(pageData, torrentTypeName);
 
-    pageData = casper.getTorrentFilePathForPageData(pageData, torrentType);
-    // pageData =  casper.getFilmDetailForPageData(pageData);
-    // utils.dump(pageData);
-    state[torrentType] = state[torrentType].concat(pageData);
+    pageData = casper.getTorrentFilePathForPageData(pageData, torrentTypeName);
+    pageData =  casper.getFilmDetailForPageData(pageData);
+    state[torrentTypeName] = state[torrentTypeName].concat(pageData);
 
     var notHasMoreData = casper.evaluate(function() {
        var notHasMoreData = document.querySelector("font.gray b[title='Alt+Pagedown']");
        return notHasMoreData;
     });
 
-    if (!notHasMoreData) {
-       page = page + 1;
-       casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
-    }
+        //if (!notHasMoreData) {
+        //   page = page + 1;
+        //   casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
+        //}
 };
 
 //set input data
@@ -322,6 +395,12 @@ casper.thenOpen(url + "torrents.php");
 casper.each(typeOfTorrents, function(casper, torrentType){
     casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0", scrape).then(function(){
         var torrentTypeName = torrentType["torrentType"];
+
+        this.echo("#####################################################");
+        utils.dump(torrentType);
+        this.echo("torrentTypeName -> " + torrentTypeName);
+        utils.dump(state[torrentTypeName]);
+        this.echo("#####################################################");
         casper.saveJSON(torrentTypeName + ".json", state[torrentTypeName]);
     });
 });
