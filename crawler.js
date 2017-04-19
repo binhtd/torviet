@@ -7,15 +7,15 @@ var x = require('casper').selectXPath,
             "torrentType": "Movie",
             "torrentCategoryID": 2
         }
-        //,
-        //{
-        //   "torrentType": "TV",
-        //   "torrentCategoryID": 3
-        //},
-        //{
-        //   "torrentType": "Music",
-        //   "torrentCategoryID": 5
-        //}
+        ,
+        {
+          "torrentType": "TV",
+          "torrentCategoryID": 3
+        },
+        {
+          "torrentType": "Music",
+          "torrentCategoryID": 5
+        }
     ],
     loginUserName = "namthienmenh",
     loginPassword = "mlopqedc";
@@ -405,7 +405,7 @@ function scrape() {
         return torrentRows;
     });
 
-    //casper.DownloadTorrent(pageData, torrentTypeName);
+    casper.DownloadTorrent(pageData, torrentTypeName);
 
     pageData = casper.getTorrentFilePathForPageData(pageData, torrentTypeName);
     pageData =  casper.getFilmDetailForPageData(pageData);
@@ -436,12 +436,6 @@ casper.thenOpen(url + "torrents.php");
 casper.each(typeOfTorrents, function(casper, torrentType){
     casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentType["torrentCategoryID"] + "&incldead=1&spstate=0&page=0", scrape).then(function(){
         var torrentTypeName = torrentType["torrentType"];
-
-        this.echo("#####################################################");
-        utils.dump(torrentType);
-        this.echo("torrentTypeName -> " + torrentTypeName);
-        utils.dump(state[torrentTypeName]);
-        this.echo("#####################################################");
         casper.saveJSON(torrentTypeName + ".json", state[torrentTypeName]);
     });
 });
