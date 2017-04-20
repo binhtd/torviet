@@ -107,7 +107,7 @@ casper.DownloadTorrent = function (pageData, torrentTypeName){
         filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
         casper.createFolderHoldFilmFiles(filmName, torrentTypeName);
-        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentTypeName));
+        //casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentTypeName));
     }
 };
 
@@ -138,11 +138,11 @@ casper.getFilmDetailForPageData = function(data){
 
         (function(index){
             casper.thenOpen( url + pageData[index]["filmDetailPage"], function(){
-                var filmInformation = (this.exists('#kimdb tr:nth-child(2) td"')  ? this.fetchText("#kimdb tr:nth-child(2) td") : "" ),
+                var filmInformation = (this.exists('#kimdb tr td"')  ? this.fetchText("#kimdb tr:nth-child(2) td") : "" ),
                     outerObject = (this.exists('#outer') ? this.getElementInfo('#outer') : null), outerContent = (!utils.isNull(outerObject) ? outerObject["html"] : ""),
                     kdescrObject = (this.exists('#kdescr') ? this.getElementInfo('#kdescr') : null), kdescrContent = (!utils.isNull(kdescrObject) ? kdescrObject["html"] : ""),
                     ktrailerObject = (this.exists('#ktrailer') ? this.getElementInfo('#ktrailer') : null), ktrailerContent = (!utils.isNull(ktrailerObject) ? ktrailerObject["html"] : ""),
-                    kothercopyObject = (this.exists('#kothercopy table tr:not(:first-child)') ? this.getElementsInfo('#kothercopy table tr:not(:first-child)') : null),
+                    kothercopyObject = (this.exists('#kothercopy table') ? this.getElementsInfo('#kothercopy table tr:not(:first-child)') : null),
                     kothercopy = [], kothercopyRow = "", kothercopyRowMatches = [], kothercopyRowLink = "", kothercopyRowFileSize = "", kothercopyRowTimeAdded = "",
                     ratingMatches = /.+?Rating:(.+?)\n/gmi.exec(filmInformation), rating = "",
                     languagesMatches = /.+?Language:(.+?)\n/gmi.exec(filmInformation), languages = "",
@@ -284,7 +284,7 @@ casper.getFilmDetailForPageData = function(data){
 
                 pageData[index]["filmDetailPageContent"] = {
                   "posterIMDB": (this.exists("#kimdb #posterimdb img") ? this.getElementAttribute("#kimdb #posterimdb img", "src") : ""),
-                  "originLinkIMDB" : (this.exists("#kimdb tr:first-child td:nth-child(2) a") ? this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href") : ""),
+                  "originLinkIMDB" : (this.exists("#kimdb tr td a") ? this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href") : ""),
                   "rating" : rating,
                   "languages": languages,
                   "country" : country,
@@ -293,7 +293,7 @@ casper.getFilmDetailForPageData = function(data){
                   "director" : director,
                   "writtenBy" : writtenBy,
                   "cast" : cast,
-                  "filmPlotOutline" : casper.stripHtmlTag( this.exists("#kimdb tr:nth-child(3) td") ? this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "") : ""),
+                  "filmPlotOutline" : casper.stripHtmlTag( this.exists("#kimdb tr td") ? this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "") : ""),
                   "technicalInformation" : {
                       "runtime" : techRuntime,
                       "resolution" : techResolution,
@@ -349,27 +349,27 @@ function scrape() {
             filmName = torrentNameElement ? torrentNameElement.getAttribute('title') : "";
             filmName = filmName.replace( /\s/g, "-" );
             rowNameElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(1)");
-            imdMatches = /.+?<img.+?>\s+(.+?)\s+\(.+votes.+/.exec(rowNameElement.innerHTML);
-            totalVoteMatches = /.+\((.+?)votes\).+/.exec(rowNameElement.innerText);
-            genreMatches = /.+?Genres:(.+)/.exec(rowNameElement.innerText);
+            imdMatches = /.+?<img.+?>\s+(.+?)\s+\(.+votes.+/.exec(rowNameElement ? rowNameElement.innerHTML : "");
+            totalVoteMatches = /.+\((.+?)votes\).+/.exec(rowNameElement ? rowNameElement.innerText : "");
+            genreMatches = /.+?Genres:(.+)/.exec(rowNameElement ? rowNameElement.innerText : "");
             torrentDownloadLinkElement = row.querySelector("td:nth-child(2) table.torrentname td:nth-child(2) a:nth-child(1)");
-            torrentDownloadLinkUrl = torrentDownloadLinkElement.getAttribute('href');
+            torrentDownloadLinkUrl = torrentDownloadLinkElement ? torrentDownloadLinkElement.getAttribute('href') : "";
             totalCommentElement = row.querySelector("td:nth-child(3) a:nth-child(1)");
-            totalComment = totalCommentElement.innerText;
+            totalComment = totalCommentElement ? totalCommentElement.innerText : "";
             timeAliveElement = row.querySelector("td:nth-child(4)");
-            timeAlive = timeAliveElement.innerText;
+            timeAlive = timeAliveElement ? timeAliveElement.innerText : "";
             timeAlive = timeAlive.replace(/\n/g, ", ");
             filmSizeElement = row.querySelector("td:nth-child(5)");
-            filmSize = filmSizeElement.innerText;
+            filmSize = filmSizeElement ? filmSizeElement.innerText : "";
             filmSize = filmSize.replace( /\n/g, " ");
             numberOfSeederElement = row.querySelector("td:nth-child(6)");
-            numberOfSeeder = numberOfSeederElement.innerText;
+            numberOfSeeder = numberOfSeederElement ? numberOfSeederElement.innerText : "";
             numberOfLeecherElement = row.querySelector("td:nth-child(7)");
-            numberOfLeecher = numberOfLeecherElement.innerText;
+            numberOfLeecher = numberOfLeecherElement ? numberOfLeecherElement.innerText : "";
             numberOfSnatchedElement = row.querySelector("td:nth-child(8)");
-            numberOfSnatched = numberOfSnatchedElement.innerText;
+            numberOfSnatched = numberOfSnatchedElement ? numberOfSnatchedElement.innerText : "";
             uploaderUserNameElement = row.querySelector("td:nth-child(9)");
-            uploaderUserName = uploaderUserNameElement.innerText;
+            uploaderUserName = uploaderUserNameElement ? uploaderUserNameElement.innerText : "";
 
             if (( imdMatches !=null) && (imdMatches.length > 1)){
                 imdNumber = imdMatches[1];
