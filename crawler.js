@@ -138,7 +138,7 @@ casper.getFilmDetailForPageData = function(data){
 
         (function(index){
             casper.thenOpen( url + pageData[index]["filmDetailPage"], function(){
-                var filmInformation = this.fetchText("#kimdb tr:nth-child(2) td"),
+                var filmInformation = (this.exists('#kimdb tr:nth-child(2) td"')  ? this.fetchText("#kimdb tr:nth-child(2) td") : "" ),
                     outerObject = (this.exists('#outer') ? this.getElementInfo('#outer') : null), outerContent = (!utils.isNull(outerObject) ? outerObject["html"] : ""),
                     kdescrObject = (this.exists('#kdescr') ? this.getElementInfo('#kdescr') : null), kdescrContent = (!utils.isNull(kdescrObject) ? kdescrObject["html"] : ""),
                     ktrailerObject = (this.exists('#ktrailer') ? this.getElementInfo('#ktrailer') : null), ktrailerContent = (!utils.isNull(ktrailerObject) ? ktrailerObject["html"] : ""),
@@ -283,8 +283,8 @@ casper.getFilmDetailForPageData = function(data){
                 }
 
                 pageData[index]["filmDetailPageContent"] = {
-                  "posterIMDB": this.getElementAttribute("#kimdb #posterimdb img", "src"),
-                  "originLinkIMDB" : this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href"),
+                  "posterIMDB": (this.exists("#kimdb #posterimdb img") ? this.getElementAttribute("#kimdb #posterimdb img", "src") : ""),
+                  "originLinkIMDB" : (this.exists("#kimdb tr:first-child td:nth-child(2) a") ? this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href") : ""),
                   "rating" : rating,
                   "languages": languages,
                   "country" : country,
@@ -293,7 +293,7 @@ casper.getFilmDetailForPageData = function(data){
                   "director" : director,
                   "writtenBy" : writtenBy,
                   "cast" : cast,
-                  "filmPlotOutline" : casper.stripHtmlTag(this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "")),
+                  "filmPlotOutline" : casper.stripHtmlTag( this.exists("#kimdb tr:nth-child(3) td") ? this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "") : ""),
                   "technicalInformation" : {
                       "runtime" : techRuntime,
                       "resolution" : techResolution,
@@ -416,10 +416,10 @@ function scrape() {
        return notHasMoreData;
     });
 
-        //if (!notHasMoreData) {
-        //   page = page + 1;
-        //   casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
-        //}
+    if (!notHasMoreData) {
+       page = page + 1;
+       casper.thenOpen(url + "/torrents_ajax.php?inclbookmarked=0&sltCategory=" + torrentTypeID + "&incldead=1&spstate=0&page=" + page, scrape);
+    }
 };
 
 //set input data
