@@ -44,6 +44,8 @@ var state = {
 casper.on("resource.requested", function(requestData, networkRequest){
     var skip = [
         'facebook.com',
+        'www.youtube.com',
+        'youtube.com'
     ];
 
     casper.each(skip, function(self, needle) {
