@@ -138,11 +138,11 @@ casper.getFilmDetailForPageData = function(data){
 
         (function(index){
             casper.thenOpen( url + pageData[index]["filmDetailPage"], function(){
-                var filmInformation = (this.exists('#kimdb tr td"')  ? this.fetchText("#kimdb tr:nth-child(2) td") : "" ),
+                var filmInformation = (this.exists('#kimdb tr:nth-child(2) td')  ? this.fetchText("#kimdb tr:nth-child(2) td") : "" ),
                     outerObject = (this.exists('#outer') ? this.getElementInfo('#outer') : null), outerContent = (!utils.isNull(outerObject) ? outerObject["html"] : ""),
                     kdescrObject = (this.exists('#kdescr') ? this.getElementInfo('#kdescr') : null), kdescrContent = (!utils.isNull(kdescrObject) ? kdescrObject["html"] : ""),
                     ktrailerObject = (this.exists('#ktrailer') ? this.getElementInfo('#ktrailer') : null), ktrailerContent = (!utils.isNull(ktrailerObject) ? ktrailerObject["html"] : ""),
-                    kothercopyObject = (this.exists('#kothercopy table') ? this.getElementsInfo('#kothercopy table tr:not(:first-child)') : null),
+                    kothercopyObject = (this.exists('#kothercopy table tr:not(:first-child)') ? this.getElementsInfo('#kothercopy table tr:not(:first-child)') : null),
                     kothercopy = [], kothercopyRow = "", kothercopyRowMatches = [], kothercopyRowLink = "", kothercopyRowFileSize = "", kothercopyRowTimeAdded = "",
                     ratingMatches = /.+?Rating:(.+?)\n/gmi.exec(filmInformation), rating = "",
                     languagesMatches = /.+?Language:(.+?)\n/gmi.exec(filmInformation), languages = "",
@@ -284,7 +284,7 @@ casper.getFilmDetailForPageData = function(data){
 
                 pageData[index]["filmDetailPageContent"] = {
                   "posterIMDB": (this.exists("#kimdb #posterimdb img") ? this.getElementAttribute("#kimdb #posterimdb img", "src") : ""),
-                  "originLinkIMDB" : (this.exists("#kimdb tr td a") ? this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href") : ""),
+                  "originLinkIMDB" : (this.exists("#kimdb tr:first-child td:nth-child(2) a") ? this.getElementAttribute("#kimdb tr:first-child td:nth-child(2) a", "href") : ""),
                   "rating" : rating,
                   "languages": languages,
                   "country" : country,
@@ -293,7 +293,7 @@ casper.getFilmDetailForPageData = function(data){
                   "director" : director,
                   "writtenBy" : writtenBy,
                   "cast" : cast,
-                  "filmPlotOutline" : casper.stripHtmlTag( this.exists("#kimdb tr td") ? this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "") : ""),
+                  "filmPlotOutline" : casper.stripHtmlTag( this.exists("#kimdb tr:nth-child(3) td") ? this.fetchText("#kimdb tr:nth-child(3) td").replace(/(\n|-)/g, "") : ""),
                   "technicalInformation" : {
                       "runtime" : techRuntime,
                       "resolution" : techResolution,
