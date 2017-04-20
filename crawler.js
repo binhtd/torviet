@@ -110,7 +110,7 @@ casper.DownloadTorrent = function (pageData, torrentTypeName){
         filmName = pageData[i]["filmName"];
         torrentDownloadLinkUrl = pageData[i]["torrentDownloadLinkUrl"];
         casper.createFolderHoldFilmFiles(filmName, torrentTypeName);
-        //casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentTypeName));
+        casper.download(url + torrentDownloadLinkUrl, casper.getTorrentFilePath(filmName, torrentTypeName));
     }
 };
 
